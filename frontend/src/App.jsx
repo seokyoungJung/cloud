@@ -1,37 +1,82 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
+
+const API_URL = 'http://localhost:8080/api/todos'
 
 function App() {
   const [todos, setTodos] = useState([])
   const [inputValue, setInputValue] = useState('')
 
-  const addTodo = (e) => {
+  // 초기 데이터 불러오기
+  useEffect(() => {
+    fetchTodos()
+  }, [])
+
+  const fetchTodos = async () => {
+    try {
+      const response = await fetch(API_URL)
+      const data = await response.json()
+      setTodos(data)
+    } catch (error) {
+      console.error('Error fetching todos:', error)
+    }
+  }
+
+  const addTodo = async (e) => {
     e.preventDefault()
     if (!inputValue.trim()) return
     
     const newTodo = {
-      id: Date.now(),
       text: inputValue,
       completed: false
     }
-    
-    setTodos([...todos, newTodo])
-    setInputValue('')
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTodo)
+      })
+      if (response.ok) {
+        setInputValue('')
+        fetchTodos()
+      }
+    } catch (error) {
+      console.error('Error adding todo:', error)
+    }
   }
 
-  const toggleTodo = (id) => {
-    setTodos(todos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
+  const toggleTodo = async (todo) => {
+    try {
+      const response = await fetch(`${API_URL}/${todo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...todo, completed: !todo.completed })
+      })
+      if (response.ok) {
+        fetchTodos()
+      }
+    } catch (error) {
+      console.error('Error updating todo:', error)
+    }
   }
 
-  const deleteTodo = (id) => {
-    setTodos(todos.filter(todo => todo.id !== id))
+  const deleteTodo = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        fetchTodos()
+      }
+    } catch (error) {
+      console.error('Error deleting todo:', error)
+    }
   }
 
   return (
     <div className="todo-container">
-      <h1>Todo List</h1>
+      <h1>Todo List (Full Stack)</h1>
       
       <form onSubmit={addTodo} className="todo-input-group">
         <input
@@ -47,7 +92,7 @@ function App() {
       <ul className="todo-list">
         {todos.map(todo => (
           <li key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-            <span onClick={() => toggleTodo(todo.id)}>
+            <span onClick={() => toggleTodo(todo)}>
               {todo.text}
             </span>
             <button onClick={() => deleteTodo(todo.id)} className="delete-button">
